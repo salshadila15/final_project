@@ -22,12 +22,23 @@ model Example {
   @@map("example")
 }
 
+enum Role {
+  USER
+  TENANT
+}
+
 model User {
   id   Int    @id @default(autoincrement())
-  name String
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  email String @unique
+  password String? // Nullable karena saat register awal belum ada password
+  role Role @default(USER)
+  isVerified Boolean @default(false)
+  verificationToken String?
+  tokenExpiresAt DateTime?
+  resetToken String? @unique
+  resetTokenExpires DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
