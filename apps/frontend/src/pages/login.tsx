@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label'
 import { api } from '../services/api';
 
 export default function Login() {
@@ -30,48 +32,77 @@ export default function Login() {
     };
 
     return (
-        <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h2>Login Akun</h2>
-      
-      {error && <div style={{ color: 'red', marginBottom: '15px', padding: '10px', background: '#ffe6e6', borderRadius: '4px' }}>{error}</div>}
-
-      <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        <div>
-          <label style={{ display: 'block', marginBottom: '5px' }}>Email:</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-            placeholder="nama@email.com"
-          />
+        <div className="flex min-h-screen w-full items-center justify-center bg-pink-50/40 px-4">
+      <div className="w-full max-w-md rounded-xl border border-pink-100 bg-card p-6 shadow-sm sm:p-8">
+        
+        {/* Header Branding */}
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Portal Sewa Properti
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Masuk untuk mengelola daftar properti & reservasi Anda
+          </p>
         </div>
 
-        <div>
-          <label style={{ display: 'block', marginBottom: '5px' }}>Password:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-            placeholder="Masukkan password kamu"
-          />
+        {/* Notifikasi Error jika ada */}
+        {error && (
+          <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive font-medium">
+            {error}
+          </div>
+        )}
+
+        {/* Form Login */}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <input
+              id="email"
+              type="email"
+              placeholder="nama@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <a href="#" className="text-xs text-rose-600 hover:underline">
+                Lupa password?
+              </a>
+            </div>
+            <input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          {/* Tombol diganti jadi warna Pink/Rose */}
+          <Button 
+            type="submit" 
+            className="w-full bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-500" 
+            disabled={loading}
+          >
+            {loading ? "Sedang Memproses..." : "Masuk ke Dashboard"}
+          </Button>
+        </form>
+
+        {/* Footer info registrasi */}
+        <div className="mt-6 text-center text-xs text-muted-foreground">
+          Belum punya akun pengelola?{" "}
+          <a href="#" className="font-medium text-rose-600 hover:underline">
+            Daftar sekarang
+          </a>
         </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ padding: '10px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-        >
-          {loading ? 'Memproses...' : 'Login'}
-        </button>
-      </form>
-
-      <p style={{ marginTop: '20px', textAlign: 'center', fontSize: '14px' }}>
-        Belum punya akun? <Link to="/register" style={{ color: '#4f46e5' }}>Daftar di sini</Link>
-      </p>
+      </div>
     </div>
   );
 }

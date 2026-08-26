@@ -4,8 +4,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { transporter } from '../utils/email';
-import { createVerificationEmailTemplate } from '../utils/emailTemplate';
+import { sendVerificationEmail } from '../utils/email';
 
 const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL
@@ -36,12 +35,7 @@ export const registerService = async (email: string, role: string) => {
 
     const verificationLink = 'http://localhost:5173/verify-password?token=${verificationToken}';
 
-    await transporter.sendMail({
-        from: '"App Support" <noreply@app.com>', // Tambah kutip penutup '>' yang kurang di sini
-        to: email,
-        subject: 'Verifikasi Akun & Set Password',
-        html: createVerificationEmailTemplate(verificationLink),
-    });
+    await sendVerificationEmail(email, verificationToken);
 
     return { verificationToken };
 };
