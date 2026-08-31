@@ -17,8 +17,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     try {
-        const { email, role } = validation.data;
-        const result = await registerService(email, role);
+        const { name, email, role } = validation.data;
+        const result = await registerService(name, email, role);
 
         res.status(201).json({
             message: 'Register berhasil. Silakan cek email untuk verifikasi.',

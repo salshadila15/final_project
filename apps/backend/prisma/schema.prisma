@@ -28,17 +28,52 @@ enum Role {
 }
 
 model User {
-  id   Int    @id @default(autoincrement())
-  email String @unique
-  password String? // Nullable karena saat register awal belum ada password
-  role Role @default(USER)
-  isVerified Boolean @default(false)
-  verificationToken String?
-  tokenExpiresAt DateTime?
-  resetToken String? @unique
-  resetTokenExpires DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    Int    @id @default(autoincrement())
+  email                 String @unique
+  password              String? // Nullable karena saat register awal belum ada password
+  name                  String
+  role                  Role @default(USER)
+  properties            Property[]
+  isVerified            Boolean @default(false)
+  verificationToken     String?
+  tokenExpiresAt        DateTime?
+  resetToken            String? @unique
+  resetTokenExpires     DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@map("users")
+}
+
+model Tenant {
+  id                     Int @id @default(autoincrement())
+  email                  String? @unique
+  password               String?
+  name                   String
+  role                   Role @default(TENANT)
+  unit                   String
+  contact                String
+  leaseStatus            String @default("Aktif (Sewa Bulanan)")
+  isVerified             Boolean @default(false)
+  verificationToken      String?
+  tokenExpiresAt         DateTime?
+  resetToken             String? @unique
+  resetTokenExpires      DateTime?
+  createdAt              DateTime @default(now())
+  updateAt               DateTime @updatedAt
+
+  @@map("tenant")
+}
+
+model Property {
+  id Int @id @default(autoincrement())
+  title String
+  description String?
+  address String
+  price Float
+  imageUrl String?
+  tenantId  Int
+  tenant User @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updateAt DateTime @updatedAt
 }

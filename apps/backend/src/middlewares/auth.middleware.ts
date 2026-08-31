@@ -27,3 +27,12 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
         return res.status(403).json({ message: 'Token tidak valid atau sudah kadaluwarsa' });
     }
 };
+
+// Tambahkan fungsi ini di bawah verifyToken
+export const isTenant = (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (req.user && req.user.role === 'TENANT') {
+        next();
+    } else {
+        return res.status(403).json({ message: 'Akses khusus pengelola/tenant' });
+    }
+};

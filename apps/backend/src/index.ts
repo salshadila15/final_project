@@ -4,6 +4,9 @@ import cors from 'cors';
 import { formatZodIssues } from './middlewares/validator.middleware';
 import { ZodError } from 'zod';
 import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
+import tenantRoutes from './routes/tenant.routes';
+import propertyRoutes from './routes/property.routes';
 
 console.log("ISI DATABASE_URL:", process.env.DATABASE_URL);
 

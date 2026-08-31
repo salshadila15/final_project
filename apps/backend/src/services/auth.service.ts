@@ -15,7 +15,7 @@ const prisma = new PrismaClient({ adapter });
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
 
 // 1. Service Register (Tanpa Password, Generate Token 1 Jam, Fleksibel Role Case)
-export const registerService = async (email: string, role: string) => {
+export const registerService = async (name: string, email: string, role: string) => {
     const existingUser = await prisma.user.findUnique({ where: {email } });
     if (existingUser) {
         throw new Error('Email sudah terdaftar');
@@ -26,10 +26,11 @@ export const registerService = async (email: string, role: string) => {
 
     const newUser = await prisma.user.create({
         data: {
-            email,
+            name: "Pengguna Baru",
+            email: email,
             role: role as Role,
-            verificationToken,
-            tokenExpiresAt
+            verificationToken: verificationToken,
+            tokenExpiresAt: tokenExpiresAt,
         }
     });
 
