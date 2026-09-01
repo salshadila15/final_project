@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 export default function Register() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('USER'); // Default role
+  const [role, setRole] = useState('USER'); // 'USER' atau 'TENANT'
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -14,11 +17,10 @@ export default function Register() {
     setMessage('');
 
     try {
-      // Sesuaikan URL endpoint backend kamu
       const response = await fetch('http://localhost:8000/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, role }),
+        body: JSON.stringify({ name, email, role }),
       });
 
       const data = await response.json();
@@ -36,47 +38,102 @@ export default function Register() {
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ccc', borderRadius: '8px' }}>
-      <h2>Daftar Akun Baru</h2>
-      <form onSubmit={handleRegister}>
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>Email:</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-            placeholder="nama@email.com"
-          />
+    <div className="flex min-h-screen w-full items-center justify-center bg-pink-50/40 px-4">
+      <div className="w-full max-w-md rounded-xl border border-pink-100 bg-card p-6 shadow-sm sm:p-8">
+        
+        {/* Header Branding */}
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Daftar Akun Baru
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Buat akun untuk mulai mengelola atau menyewa properti
+          </p>
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>Role:</label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+        {/* Notifikasi Pesan/Error */}
+        {message && (
+          <div className={`mb-4 rounded-md p-3 text-sm font-medium ${
+            message.includes('berhasil') 
+              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
+              : 'bg-destructive/10 text-destructive'
+          }`}>
+            {message}
+          </div>
+        )}
+
+        {/* Form Register */}
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nama Lengkap</Label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="Nama Anda"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="nama@email.com"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Role</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setRole('USER')}
+                className={`flex h-9 items-center justify-center rounded-md border text-sm font-medium transition-colors ${
+                  role === 'USER'
+                    ? 'border-rose-500 bg-rose-50 text-rose-700 shadow-xs'
+                    : 'border-input bg-transparent text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                User (Pencari)
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('TENANT')}
+                className={`flex h-9 items-center justify-center rounded-md border text-sm font-medium transition-colors ${
+                  role === 'TENANT'
+                    ? 'border-rose-500 bg-rose-50 text-rose-700 shadow-xs'
+                    : 'border-input bg-transparent text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                Tenant (Pengelola)
+              </button>
+            </div>
+          </div>
+          <Button 
+            type="submit" 
+            className="w-full bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-500" 
+            disabled={loading}
           >
-            <option value="USER">User</option>
-            <option value="TENANT">Tenant</option>
-          </select>
+            {loading ? 'Mengirim...' : 'Daftar & Kirim Link Verifikasi'}
+          </Button>
+        </form>
+
+        {/* Footer ke halaman Login */}
+        <div className="mt-6 text-center text-xs text-muted-foreground">
+          Sudah punya akun?{" "}
+          <Link to="/login" className="font-medium text-rose-600 hover:underline">
+            Login di sini
+          </Link>
         </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ width: '100%', padding: '10px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          {loading ? 'Mengirim...' : 'Daftar & Kirim Link Verifikasi'}
-        </button>
-      </form>
-
-      {message && <p style={{ marginTop: '15px', color: message.includes('berhasil') ? 'green' : 'red' }}>{message}</p>}
-
-      <p style={{ marginTop: '20px', textAlign: 'center' }}>
-        Sudah punya akun? <span style={{ color: '#2563eb', cursor: 'pointer' }} onClick={() => navigate('/login')}>Login di sini</span>
-      </p>
+      </div>
     </div>
   );
 }

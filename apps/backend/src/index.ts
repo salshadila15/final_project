@@ -22,6 +22,11 @@ app.get('/ping', (req: Request, res: Response) => {
 
 // auth routes
 app.use('/api/auth', authRoutes);
+app.use('/api/properties', propertyRoutes);
+// user routes
+app.use('/api/users', userRoutes);
+// tenant routes
+app.use('/api/tenants', tenantRoutes);
 
 // Not Found Route
 app.use((req: Request, res: Response, next: NextFunction) => {

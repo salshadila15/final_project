@@ -1,9 +1,9 @@
 import { Router, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
+import { createProperty } from '../controllers/property.controller';
 import { verifyToken, AuthRequest } from '../middlewares/auth.middleware';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Middleware pengecekan khusus tenant
 const isTenant = (req: AuthRequest, res: Response, next: Function) => {
@@ -15,22 +15,24 @@ const isTenant = (req: AuthRequest, res: Response, next: Function) => {
 };
 
 // Endpoint Tambah Properti (POST /api/properties)
-router.post('/', verifyToken, isTenant, async (req: AuthRequest, res: Response) => {
+router.post('/', verifyToken, isTenant, createProperty, async (req: AuthRequest, res: Response) => {
     try {
-        const { title, description, address, price, imageUrl } = req.body;
+        const { title, category, description, imageUrl, room, address, price } = req.body;
         const tenantId = req.user?.id;
 
-        if (!title || !address || !price) {
-            return res.status(400).json({ message: 'Judul, alamat, dan harga wajib diisi' });
+        if (!title || !category || !address || !price || !room) {
+            return res.status(400).json({ message: 'Judul, kategori, alamat, harga, dan jumlah kamar wajib diisi' });
         }
 
         const newProperty = await prisma.property.create({
             data: {
                 title,
+                category,
                 description,
+                imageUrl,
+                room: Number(room),
                 address,
                 price: parseFloat(price),
-                imageUrl,
                 tenantId: Number(tenantId),
             },
         });

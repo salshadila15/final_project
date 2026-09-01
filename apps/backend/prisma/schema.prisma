@@ -60,7 +60,7 @@ model Tenant {
   resetToken             String? @unique
   resetTokenExpires      DateTime?
   createdAt              DateTime @default(now())
-  updateAt               DateTime @updatedAt
+  updatedAt               DateTime @updatedAt
 
   @@map("tenant")
 }
@@ -68,12 +68,14 @@ model Tenant {
 model Property {
   id Int @id @default(autoincrement())
   title String
+  category String
   description String?
+  imageUrl String?
+  room Int
   address String
   price Float
-  imageUrl String?
   tenantId  Int
   tenant User @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-  updateAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 }
