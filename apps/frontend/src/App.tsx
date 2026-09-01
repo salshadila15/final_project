@@ -7,6 +7,7 @@ import DashboardPage from './pages/dashboard';
 import RoleRoute from './route/RoleRoutes';
 import TenantDashboard from './pages/tenant/TenantDashboard';
 import UserDashboard from './pages/user/UserDashboard';
+import CreatePropertyPage from './pages/tenant/CreateProperty';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/tenant/dashboard" element={<RoleRoute allowedRole='TENANT'><TenantDashboard /></RoleRoute>} />
       <Route path="/user/dashboard" element={<RoleRoute allowedRole='USER'><UserDashboard /></RoleRoute>} />
+      <Route path="/properties/add" element={<RoleRoute allowedRole='TENANT'><CreatePropertyPage /></RoleRoute>} />
     </Routes>
     </AuthProvider>
     </BrowserRouter>

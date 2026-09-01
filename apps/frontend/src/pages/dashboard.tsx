@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Search, User, Menu, LayoutDashboard, Users, Calendar, Settings, LogOut, Sparkles, Home, MapPin } from 'lucide-react';
+import { Search, LayoutDashboard, Users, Calendar, Settings, LogOut, Sparkles, Home, MapPin } from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -150,9 +150,7 @@ export default function Dashboard() {
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
               </div>
-              <Button className="bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-sm">
-                + Tambah Unit Properti
-              </Button>
+
             </div>
 
             <div className="pt-4">
