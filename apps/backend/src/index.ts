@@ -7,14 +7,24 @@ import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import tenantRoutes from './routes/tenant.routes';
 import propertyRoutes from './routes/property.routes';
+import bookingRoutes from './routes/booking.routes';
+import reviewRoutes from './routes/review.routes';
 
-console.log("ISI DATABASE_URL:", process.env.DATABASE_URL);
+console.log('TENANT ROUTES:', tenantRoutes);
+console.log('TENANT ROUTES TYPE:', typeof tenantRoutes);
+console.log('ISI DATABASE_URL:', process.env.DATABASE_URL);
 
 const app: Application = express();
 const PORT = 8000;
 
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  })
+);
+
 app.use(express.json());
-app.use(cors());
 
 app.get('/ping', (req: Request, res: Response) => {
   res.send('pong!');
@@ -23,10 +33,12 @@ app.get('/ping', (req: Request, res: Response) => {
 // auth routes
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
+app.use('/api/bookings', bookingRoutes);
 // user routes
 app.use('/api/users', userRoutes);
 // tenant routes
 app.use('/api/tenants', tenantRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Not Found Route
 app.use((req: Request, res: Response, next: NextFunction) => {

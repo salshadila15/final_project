@@ -12,70 +12,177 @@ datasource db {
   provider = "postgresql"
 }
 
-model Example {
-  id   Int    @id @default(autoincrement())
-  name String
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("example")
-}
-
 enum Role {
   USER
   TENANT
 }
 
+enum BookingStatus {
+  MENUNGGU_PEMBAYARAN
+  MENUNGGU_KONFIRMASI
+  DIPROSES
+  SELESAI
+  DIBATALKAN
+}
+
 model User {
-  id                    Int    @id @default(autoincrement())
-  email                 String @unique
-  password              String? // Nullable karena saat register awal belum ada password
-  name                  String
-  role                  Role @default(USER)
-  properties            Property[]
-  isVerified            Boolean @default(false)
-  verificationToken     String?
-  tokenExpiresAt        DateTime?
-  resetToken            String? @unique
-  resetTokenExpires     DateTime?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id       Int     @id @default(autoincrement())
+  email    String  @unique
+  password String? // Nullable karena saat register awal belum ada password
+  name     String
+  role     Role    @default(USER)
+
+  isVerified        Boolean   @default(false)
+  verificationToken String?
+  tokenExpiresAt    DateTime?
+  resetToken        String?   @unique
+  resetTokenExpires DateTime?
+
+  properties Property[]
+  bookings   Booking[]
+  reviews    Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
 
-model Tenant {
-  id                     Int @id @default(autoincrement())
-  email                  String? @unique
-  password               String?
-  name                   String
-  role                   Role @default(TENANT)
-  unit                   String
-  contact                String
-  leaseStatus            String @default("Aktif (Sewa Bulanan)")
-  isVerified             Boolean @default(false)
-  verificationToken      String?
-  tokenExpiresAt         DateTime?
-  resetToken             String? @unique
-  resetTokenExpires      DateTime?
-  createdAt              DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-
-  @@map("tenant")
-}
-
 model Property {
-  id Int @id @default(autoincrement())
-  title String
-  category String
+  id          Int     @id @default(autoincrement())
+  title       String
+  category    String
   description String?
-  imageUrl String?
-  room Int
-  address String
-  price Float
-  tenantId  Int
-  tenant User @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  imageUrl    String?
+  address     String
+
+  tenantId Int
+  tenant   User @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  rooms Room[]
+
+  bookings Booking[]
+  reviews  Review[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+model Room {
+  id Int @id @default(autoincrement())
+
+  propertyId Int
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  quantity    Int     @default(1)
+  price       Decimal @db.Decimal(12, 2)
+
+  availabilities RoomAvailability[]
+  prices         RoomPrice[]
+  bookings       Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+}
+
+model RoomAvailability {
+  id     Int  @id @default(autoincrement())
+  roomId Int
+  room   Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  date        DateTime @db.Date
+  isAvailable Boolean  @default(true)
+
+  @@unique([roomId, date])
+}
+
+model RoomPrice {
+  id     Int  @id @default(autoincrement())
+  roomId Int
+  room   Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  date  DateTime @db.Date
+  price Decimal  @db.Decimal(12, 2)
+
+  @@unique([roomId, date])
+}
+
+model Booking {
+  id Int @id @default(autoincrement())
+
+  bookingCode String @unique
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  propertyId Int
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  roomId Int
+  room   Room @relation(fields: [roomId], references: [id])
+
+  checkIn  DateTime @db.Date
+  checkOut DateTime @db.Date
+
+  nights BookingNight[]
+
+  guests      Int
+  totalAmount Decimal @db.Decimal(12, 2)
+
+  status BookingStatus @default(MENUNGGU_PEMBAYARAN)
+
+  paymentProof    String?
+  paymentDeadline DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  review Review?
+
+  @@index([userId])
+  @@index([propertyId])
+  @@index([roomId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([checkIn])
+  @@index([checkOut])
+}
+
+model BookingNight {
+  id        Int     @id @default(autoincrement())
+  bookingId Int
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  date  DateTime @db.Date
+  price Decimal  @db.Decimal(12, 2)
+
+  @@unique([bookingId, date])
+}
+
+model Review {
+  id Int @id @default(autoincrement())
+
+  rating  Int
+  comment String?
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  propertyId Int
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  bookingId Int     @unique
+  booking   Booking @relation(fields: [bookingId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([propertyId])
 }

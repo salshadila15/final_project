@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { api } from '@/lib/axios';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export default function VerifyPassword() {
@@ -21,24 +22,23 @@ export default function VerifyPassword() {
 
     try {
       // Sesuaikan URL endpoint backend untuk set password/verifikasi
-      const response = await fetch('http://localhost:8000/api/auth/verify-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password }),
+      await api.post('/auth/verify-password', {
+        token,
+        password
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Gagal menyimpan password');
-      }
 
       setMessage('Password berhasil dibuat! Mengarahkan ke halaman login...');
       setTimeout(() => {
         navigate('/login');
       }, 2000);
-    } catch (err: any) {
-      setMessage(err.message);
+    } catch (err: unknown) {
+      // Menggunakan tipe tangkapan error standar dari Axios atau JavaScript Error
+      const error = err as { 
+        response?: { data?: { message?: string } }; 
+        message?: string 
+      };
+
+      setMessage(error.response?.data?.message || error.message || 'Gagal menyimpan password');
     } finally {
       setLoading(false);
     }

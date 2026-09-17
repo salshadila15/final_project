@@ -8,7 +8,12 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     // Contoh jika nanti butuh query param: const { search } = req.query;
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, status: true }
+      select: { 
+        id: true, 
+        name: true, 
+        email: true, 
+        role: true
+      }
     });
     return res.json(users);
   } catch (error: any) {
