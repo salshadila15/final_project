@@ -1,5 +1,6 @@
+import { api } from '@/lib/axios';
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
@@ -9,7 +10,6 @@ export default function Register() {
   const [role, setRole] = useState('USER'); // 'USER' atau 'TENANT'
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,21 +17,19 @@ export default function Register() {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, role }),
+      const response = await api.post('/auth/register', {
+        name,
+        email,
+        role
       });
 
-      const data = await response.json();
+      const data = response.data;
+      console.log('Berhasil:', data);
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Gagal melakukan registrasi');
-      }
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
 
-      setMessage('Registrasi berhasil! Silakan cek email kamu untuk tautan pembuatan password.');
-    } catch (err: any) {
-      setMessage(err.message);
+      throw new Error(err.response?.data?.message || 'Gagal melakukan registrasi');
     } finally {
       setLoading(false);
     }

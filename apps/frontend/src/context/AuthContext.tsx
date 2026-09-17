@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from '@/services/api';
+import { api } from '@/lib/axios';
 
 interface AuthUser {
     id: number;
@@ -13,49 +13,63 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<AuthUser>;
     logout: () => void;
     isAuthenticated: boolean;
+    isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-
-        if (token && storedUser) {
+        const checkUserSession = async () => {
+            setIsLoading(true);
             try {
-                setUser(JSON.parse(storedUser));
+                // Pastikan token ada sebelum manggil /auth/me
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                const response = await api.get('/auth/me');
+                setUser(response.data.user || response.data);
             } catch (error) {
+                // Jika token invalid/expired, bersihkan localStorage
                 localStorage.removeItem('token');
-                localStorage.removeItem('user');
+                setUser(null);
+            } finally {
+                setIsLoading(false);
             }
-        }
+        };
+        checkUserSession();
     }, []);
 
     const login = async (email: string, password: string): Promise<AuthUser> => {
         const response = await api.post('/auth/login', { email, password });
-        
-        // Sesuaikan jika data user di backend kamu posisinya berbeda (misal: response.data)
-        const token = response.data.token;
+        const token = response.data.token; 
+        if (token) {
+            localStorage.setItem('token', token);
+        }
         const userData = response.data.user || response.data; 
-
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
-        
         return userData;
     };
 
-    const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setUser(null);
+    const logout = async () => {
+        try {
+            await api.post('/auth/logout');
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            localStorage.removeItem('token'); // 👈 Hapus token saat logout
+            setUser(null);
+        }
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, isLoading }}>
             {children}
         </AuthContext.Provider>
     );
@@ -63,6 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
     const context = useContext(AuthContext);
-    if (!context) throw new Error('useAuth harus digunakan di dalam AuthProvider');
+    if (!context) {
+        throw new Error('useAuth harus digunakan di dalam AuthProvider');
+    }
     return context;
 }

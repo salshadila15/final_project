@@ -3,7 +3,9 @@ import {
   register,
   verifyAndSetPassword,
   login,
+  logout,
   getProfileController,
+  getMe
 } from '../controllers/auth.controller';
 import { verifyToken } from '../middlewares/auth.middleware';
 
@@ -17,8 +19,7 @@ router.post('/register', register);
 router.get('/verify-password', verifyAndSetPassword);
 router.post('/verify-password', verifyAndSetPassword);
 router.post('/login', login);
-
-// Rute privat yang diproteksi oleh token
-router.get('/me', verifyToken, getProfileController);
+router.post('/logout', logout);
+router.get('/me', verifyToken, getMe);
 
 export default router;

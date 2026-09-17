@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { registerService, verifyAndSetPasswordService, loginService } from '../services/auth.service';
 import { registerSchema } from '../validators/auth.validation';
 import { AuthRequest } from '../middlewares/auth.middleware';
+import prisma from '../lib/prisma';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
     const validation = registerSchema.safeParse(req.body);
@@ -81,3 +82,40 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             res.status(400).json ({ message: error.message });
         }
         };
+    
+    export const logout = async (req: Request, res: Response): Promise<void> => {
+        try {
+            res.clearCookie('token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            });
+
+        res.status(200).json({ message: 'Logout berhasil' });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Terjadi kesalahan pada server' });
+        }
+    };
+
+    export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
+        try {
+            const userId = req.user?.id;
+            const user = await prisma.user.findUnique({
+                where: { id: Number(userId) },
+                select: { id: true, email: true, name: true, role: true },
+            });
+
+            if (!user) {
+                res.status(404).json({ message: 'User tidak ditemukan' });
+                return;
+            }
+
+            res.status(200).json({ user });
+            return;
+        } catch (error) {
+            res.status(500).json({ message: 'Internal server error' });
+            return;
+        }
+    };
+    
