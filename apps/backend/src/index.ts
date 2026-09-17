@@ -1,8 +1,14 @@
+import 'dotenv/config';
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import ExampleRouter from './routes/example.route';
 import { formatZodIssues } from './middlewares/validator.middleware';
 import { ZodError } from 'zod';
+import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/user.routes';
+import tenantRoutes from './routes/tenant.routes';
+import propertyRoutes from './routes/property.routes';
+
+console.log("ISI DATABASE_URL:", process.env.DATABASE_URL);
 
 const app: Application = express();
 const PORT = 8000;
@@ -14,8 +20,13 @@ app.get('/ping', (req: Request, res: Response) => {
   res.send('pong!');
 });
 
-// example routes
-app.use('/api/example', ExampleRouter);
+// auth routes
+app.use('/api/auth', authRoutes);
+app.use('/api/properties', propertyRoutes);
+// user routes
+app.use('/api/users', userRoutes);
+// tenant routes
+app.use('/api/tenants', tenantRoutes);
 
 // Not Found Route
 app.use((req: Request, res: Response, next: NextFunction) => {
