@@ -79,6 +79,7 @@ router.get(
               id: true,
               name: true,
               quantity: true,
+              maxGuests: true,
               price: true,
             },
           },
@@ -115,7 +116,13 @@ router.get('/', async (_req: AuthRequest, res: Response) => {
             id: true,
             name: true,
             quantity: true,
+            maxGuests: true,
             price: true,
+          },
+        },
+        reviews: {
+          select: {
+            rating: true,
           },
         },
       },
@@ -124,8 +131,31 @@ router.get('/', async (_req: AuthRequest, res: Response) => {
       },
     });
 
+    const formattedProperties = properties.map((property) => {
+      const reviewCount = property.reviews.length;
+
+      const averageRating =
+        reviewCount > 0
+          ? Number(
+              (
+                property.reviews.reduce(
+                  (sum, review) => sum + review.rating,
+                  0
+                ) / reviewCount
+              ).toFixed(1)
+            )
+          : 0;
+
+      return {
+        ...property,
+        averageRating,
+        reviewCount,
+        reviews: undefined,
+      };
+    });
+
     res.status(200).json({
-      data: properties,
+      data: formattedProperties,
     });
   } catch (error) {
     console.error('Get properties error:', error);
@@ -144,102 +174,179 @@ router.get('/', async (_req: AuthRequest, res: Response) => {
 router.get('/search', async (req: AuthRequest, res: Response) => {
   try {
     const location =
-      typeof req.query.location === 'string' ? req.query.location.trim() : '';
+      typeof req.query.location === 'string'
+        ? req.query.location.trim()
+        : '';
 
     const checkIn =
-      typeof req.query.checkIn === 'string' ? req.query.checkIn : '';
+      typeof req.query.checkIn === 'string'
+        ? req.query.checkIn
+        : '';
 
     const checkOut =
-      typeof req.query.checkOut === 'string' ? req.query.checkOut : '';
+      typeof req.query.checkOut === 'string'
+        ? req.query.checkOut
+        : '';
+
+    const guestsQuery =
+      typeof req.query.guests === 'string'
+        ? req.query.guests
+        : '';
+
+    let guests: number | undefined;
+
+    if (guestsQuery) {
+      guests = Number(guestsQuery);
+
+      if (!Number.isInteger(guests) || guests < 1) {
+        return res.status(400).json({
+          message:
+            'Jumlah tamu harus berupa angka minimal 1',
+        });
+      }
+    }
 
     if (!checkIn || !checkOut) {
       return res.status(400).json({
-        message: 'Check-in dan check-out wajib diisi',
+        message:
+          'Check-in dan check-out wajib diisi',
       });
     }
 
-    const startDate = new Date(`${checkIn}T00:00:00`);
-    const endDate = new Date(`${checkOut}T00:00:00`);
+    const startDate =
+      new Date(`${checkIn}T00:00:00`);
 
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    const endDate =
+      new Date(`${checkOut}T00:00:00`);
+
+    if (
+      Number.isNaN(startDate.getTime()) ||
+      Number.isNaN(endDate.getTime())
+    ) {
       return res.status(400).json({
-        message: 'Format tanggal tidak valid',
+        message:
+          'Format tanggal tidak valid',
       });
     }
 
     if (endDate <= startDate) {
       return res.status(400).json({
-        message: 'Check-out harus setelah check-in',
+        message:
+          'Check-out harus setelah check-in',
       });
     }
 
-    const properties = await prisma.property.findMany({
-      where: location
-        ? {
-            OR: [
-              {
-                title: {
-                  contains: location,
-                  mode: 'insensitive',
+    const properties =
+      await prisma.property.findMany({
+        where: location
+          ? {
+              OR: [
+                {
+                  title: {
+                    contains: location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  address: {
+                    contains: location,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  category: {
+                    contains: location,
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            }
+          : {},
+        include: {
+          rooms: {
+            include: {
+              availabilities: {
+                where: {
+                  date: {
+                    gte: startDate,
+                    lt: endDate,
+                  },
                 },
               },
-              {
-                address: {
-                  contains: location,
-                  mode: 'insensitive',
-                },
-              },
-              {
-                category: {
-                  contains: location,
-                  mode: 'insensitive',
-                },
-              },
-            ],
-          }
-        : {},
-      include: {
-        rooms: {
-          include: {
-            availabilities: {
-              where: {
-                date: {
-                  gte: startDate,
-                  lt: endDate,
-                },
-              },
-            },
-            prices: {
-              where: {
-                date: {
-                  gte: startDate,
-                  lt: endDate,
+              prices: {
+                where: {
+                  date: {
+                    gte: startDate,
+                    lt: endDate,
+                  },
                 },
               },
             },
           },
+          reviews: {
+            select: {
+              rating: true,
+            },
+          },
         },
-      },
-    });
-
-    const results = properties.filter((property) => {
-      return property.rooms.some((room) => {
-        const unavailableDates = room.availabilities.filter(
-          (availability) => !availability.isAvailable
-        );
-
-        return unavailableDates.length === 0;
       });
-    });
+
+    const results = properties
+      .filter((property) => {
+        return property.rooms.some((room) => {
+          const unavailableDates =
+            room.availabilities.filter(
+              (availability) =>
+                !availability.isAvailable
+            );
+
+          const hasEnoughCapacity =
+            guests === undefined ||
+            room.maxGuests >= guests;
+
+          return (
+            unavailableDates.length === 0 &&
+            hasEnoughCapacity
+          );
+        });
+      })
+      .map((property) => {
+        const reviewCount =
+          property.reviews.length;
+
+        const averageRating =
+          reviewCount > 0
+            ? Number(
+                (
+                  property.reviews.reduce(
+                    (sum, review) =>
+                      sum + review.rating,
+                    0
+                  ) / reviewCount
+                ).toFixed(1)
+              )
+            : 0;
+
+        return {
+          ...property,
+          averageRating,
+          reviewCount,
+          reviews: undefined,
+        };
+      });
 
     return res.status(200).json({
       data: results,
     });
   } catch (error) {
-    console.error('Search properties error:', error);
+    console.error(
+      'Search properties error:',
+      error
+    );
 
     return res.status(500).json({
-      message: 'Gagal mencari properti',
+      message:
+        'Gagal mencari properti',
     });
   }
 });
@@ -250,145 +357,213 @@ router.get('/search', async (req: AuthRequest, res: Response) => {
 // PUBLIC - guest dan USER boleh melihat detail
 // ============================================
 
-router.get('/:id', async (req: AuthRequest, res: Response) => {
-  try {
-    const propertyId = Number(req.params.id);
+router.get(
+  '/:id',
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const propertyId =
+        Number(req.params.id);
 
-    if (Number.isNaN(propertyId)) {
-      return res.status(400).json({
-        message: 'ID properti tidak valid',
-      });
-    }
-
-    const checkIn =
-      typeof req.query.checkIn === 'string' ? req.query.checkIn : '';
-
-    const checkOut =
-      typeof req.query.checkOut === 'string' ? req.query.checkOut : '';
-
-    let startDate: Date | undefined;
-    let endDate: Date | undefined;
-
-    if (checkIn || checkOut) {
-      if (!checkIn || !checkOut) {
+      if (Number.isNaN(propertyId)) {
         return res.status(400).json({
-          message: 'Check-in dan check-out harus diisi',
+          message:
+            'ID properti tidak valid',
         });
       }
 
-      startDate = new Date(`${checkIn}T00:00:00`);
-      endDate = new Date(`${checkOut}T00:00:00`);
+      const checkIn =
+        typeof req.query.checkIn === 'string'
+          ? req.query.checkIn
+          : '';
 
-      if (
-        Number.isNaN(startDate.getTime()) ||
-        Number.isNaN(endDate.getTime())
-      ) {
-        return res.status(400).json({
-          message: 'Format tanggal tidak valid',
-        });
+      const checkOut =
+        typeof req.query.checkOut === 'string'
+          ? req.query.checkOut
+          : '';
+
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+
+      if (checkIn || checkOut) {
+        if (!checkIn || !checkOut) {
+          return res.status(400).json({
+            message:
+              'Check-in dan check-out harus diisi',
+          });
+        }
+
+        startDate =
+          new Date(`${checkIn}T00:00:00`);
+
+        endDate =
+          new Date(`${checkOut}T00:00:00`);
+
+        if (
+          Number.isNaN(startDate.getTime()) ||
+          Number.isNaN(endDate.getTime())
+        ) {
+          return res.status(400).json({
+            message:
+              'Format tanggal tidak valid',
+          });
+        }
+
+        if (endDate <= startDate) {
+          return res.status(400).json({
+            message:
+              'Check-out harus setelah check-in',
+          });
+        }
       }
 
-      if (endDate <= startDate) {
-        return res.status(400).json({
-          message: 'Check-out harus setelah check-in',
-        });
-      }
-    }
-
-    const property = await prisma.property.findUnique({
-      where: {
-        id: propertyId,
-      },
-      include: {
-        rooms: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            quantity: true,
-            price: true,
+      const property =
+        await prisma.property.findUnique({
+          where: {
+            id: propertyId,
           },
-        },
-      },
-    });
+          include: {
+            rooms: {
+              include: {
+                prices: {
+                  orderBy: {
+                    date: 'asc',
+                  },
+                },
+                availabilities: {
+                  orderBy: {
+                    date: 'asc',
+                  },
+                },
+              },
+            },
+          },
+        });
 
-    if (!property) {
-      return res.status(404).json({
-        message: 'Properti tidak ditemukan',
-      });
-    }
+      if (!property) {
+        return res.status(404).json({
+          message:
+            'Properti tidak ditemukan',
+        });
+      }
 
-    if (!startDate || !endDate) {
+      if (!startDate || !endDate) {
+        return res.status(200).json({
+          data: {
+            ...property,
+            rooms: property.rooms.map(
+              (room) => ({
+                ...room,
+                price:
+                  Number(room.price),
+                maxGuests:
+                  room.maxGuests,
+                prices:
+                  room.prices.map(
+                    (item) => ({
+                      ...item,
+                      price:
+                        Number(
+                          item.price
+                        ),
+                    })
+                  ),
+                availableQuantity:
+                  room.quantity,
+              })
+            ),
+          },
+        });
+      }
+
+      const ACTIVE_BOOKING_STATUSES = [
+        'MENUNGGU_PEMBAYARAN',
+        'MENUNGGU_KONFIRMASI',
+        'DIPROSES',
+      ] as const;
+
+      const roomsWithAvailability =
+        await Promise.all(
+          property.rooms.map(
+            async (room) => {
+              const overlappingBookings =
+                await prisma.booking.count({
+                  where: {
+                    roomId: room.id,
+                    status: {
+                      in: [
+                        ...ACTIVE_BOOKING_STATUSES,
+                      ],
+                    },
+                    checkIn: {
+                      lt: endDate,
+                    },
+                    checkOut: {
+                      gt: startDate,
+                    },
+                  },
+                });
+
+              const unavailableDates =
+                await prisma.roomAvailability.count({
+                  where: {
+                    roomId: room.id,
+                    date: {
+                      gte: startDate,
+                      lt: endDate,
+                    },
+                    isAvailable: false,
+                  },
+                });
+
+              const availableQuantity =
+                unavailableDates > 0
+                  ? 0
+                  : Math.max(
+                      room.quantity -
+                        overlappingBookings,
+                      0
+                    );
+
+              return {
+                ...room,
+                price:
+                  Number(room.price),
+                maxGuests:
+                  room.maxGuests,
+                prices:
+                  room.prices.map(
+                    (item) => ({
+                      ...item,
+                      price:
+                        Number(
+                          item.price
+                        ),
+                    })
+                  ),
+                availableQuantity,
+              };
+            }
+          )
+        );
+
       return res.status(200).json({
         data: {
           ...property,
-          rooms: property.rooms.map((room) => ({
-            ...room,
-            availableQuantity: room.quantity,
-          })),
+          rooms: roomsWithAvailability,
         },
       });
+    } catch (error) {
+      console.error(
+        'Get property detail error:',
+        error
+      );
+
+      return res.status(500).json({
+        message:
+          'Gagal mengambil detail properti',
+      });
     }
-
-    const ACTIVE_BOOKING_STATUSES = [
-      'MENUNGGU_PEMBAYARAN',
-      'MENUNGGU_KONFIRMASI',
-      'DIPROSES',
-    ] as const;
-
-    const roomsWithAvailability = await Promise.all(
-      property.rooms.map(async (room) => {
-        const overlappingBookings = await prisma.booking.count({
-          where: {
-            roomId: room.id,
-            status: {
-              in: [...ACTIVE_BOOKING_STATUSES],
-            },
-            checkIn: {
-              lt: endDate,
-            },
-            checkOut: {
-              gt: startDate,
-            },
-          },
-        });
-
-        const unavailableDates = await prisma.roomAvailability.count({
-          where: {
-            roomId: room.id,
-            date: {
-              gte: startDate,
-              lt: endDate,
-            },
-            isAvailable: false,
-          },
-        });
-
-        const availableQuantity =
-          unavailableDates > 0
-            ? 0
-            : Math.max(room.quantity - overlappingBookings, 0);
-
-        return {
-          ...room,
-          availableQuantity,
-        };
-      })
-    );
-
-    return res.status(200).json({
-      data: {
-        ...property,
-        rooms: roomsWithAvailability,
-      },
-    });
-  } catch (error) {
-    console.error('Get property detail error:', error);
-
-    return res.status(500).json({
-      message: 'Gagal mengambil detail properti',
-    });
   }
-});
+);
 
 export default router;

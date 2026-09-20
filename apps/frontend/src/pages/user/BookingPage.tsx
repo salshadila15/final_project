@@ -9,6 +9,7 @@ interface Room {
   name: string;
   description: string | null;
   quantity: number;
+  maxGuests: number;
   availableQuantity: number;
   price: string | number;
 }
@@ -42,6 +43,7 @@ export default function BookingPage() {
   const [error, setError] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
   const [nightlyPrices, setNightlyPrices] = useState<NightlyPrice[]>([]);
+  const [guestCount, setGuestCount] = useState(2);
 
   const selectedRoom = useMemo(() => {
     if (!property || !roomId) {
@@ -95,6 +97,7 @@ export default function BookingPage() {
         setProperty(response.data.data);
       } catch (error) {
         console.error('Get booking property error:', error);
+
         setError('Gagal mengambil data properti. Silakan coba lagi.');
       } finally {
         setLoading(false);
@@ -108,7 +111,27 @@ export default function BookingPage() {
     }
 
     fetchProperty();
-  }, [propertyId]);
+  }, [propertyId, checkIn, checkOut]);
+
+  useEffect(() => {
+    if (!selectedRoom) {
+      return;
+    }
+
+    const maxGuests = Math.max(Number(selectedRoom.maxGuests) || 1, 1);
+
+    setGuestCount((current) => {
+      if (current < 1) {
+        return 1;
+      }
+
+      if (current > maxGuests) {
+        return maxGuests;
+      }
+
+      return current;
+    });
+  }, [selectedRoom]);
 
   useEffect(() => {
     async function fetchNightlyPrices() {
@@ -135,6 +158,7 @@ export default function BookingPage() {
         setNightlyPrices(prices);
       } catch (error) {
         console.error('Get nightly prices error:', error);
+        setNightlyPrices([]);
       }
     }
 
@@ -164,6 +188,26 @@ export default function BookingPage() {
   }
 
   const handleCreateBooking = async () => {
+    if (!selectedRoom) {
+      alert('Kamar yang dipilih tidak ditemukan.');
+      return;
+    }
+
+    if (!checkIn || !checkOut || nights <= 0) {
+      alert('Tanggal menginap tidak valid.');
+      return;
+    }
+
+    if (!Number.isInteger(guestCount) || guestCount < 1) {
+      alert('Jumlah tamu tidak valid.');
+      return;
+    }
+
+    if (guestCount > selectedRoom.maxGuests) {
+      alert(`Room ini maksimal untuk ${selectedRoom.maxGuests} tamu.`);
+      return;
+    }
+
     try {
       setBookingLoading(true);
 
@@ -172,12 +216,15 @@ export default function BookingPage() {
         roomId: Number(roomId),
         checkIn,
         checkOut,
-        guests: 2,
+        guests: guestCount,
       });
 
-      alert(
-        `Booking berhasil! \nKode Booking: ${response.data.data.bookingCode}`
-      );
+      const bookingId = response.data.data.id;
+
+      if (bookingId) {
+        navigate(`/transactions?bookingId=${bookingId}`);
+        return;
+      }
 
       navigate('/transactions');
     } catch (error: any) {
@@ -265,6 +312,7 @@ export default function BookingPage() {
           </p>
         </div>
 
+        {/* Property & Room */}
         <div className="overflow-hidden rounded-2xl border border-pink-100 bg-white shadow-sm">
           <div className="h-52 w-full bg-rose-50 md:h-64">
             {property.imageUrl ? (
@@ -307,14 +355,22 @@ export default function BookingPage() {
                 </p>
               )}
 
-              <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
-                <Users className="h-4 w-4 text-rose-500" />
-                <span>{selectedRoom.availableQuantity} unit tersedia</span>
+              <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-rose-500" />
+                  <span>Maksimal {selectedRoom.maxGuests} tamu</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Home className="h-4 w-4 text-rose-500" />
+                  <span>{selectedRoom.availableQuantity} unit tersedia</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Stay Details */}
         <div className="rounded-2xl border border-pink-100 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-900">Detail menginap</h2>
 
@@ -346,66 +402,113 @@ export default function BookingPage() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl border border-slate-100 p-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Durasi</span>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-100 p-4">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-rose-500" />
 
-              <span className="font-semibold text-slate-900">
-                {nights} malam
-              </span>
+                <p className="text-sm font-semibold text-slate-900">
+                  Jumlah tamu
+                </p>
+              </div>
+
+              <select
+                value={guestCount}
+                onChange={(event) => setGuestCount(Number(event.target.value))}
+                className="mt-3 h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+              >
+                {Array.from(
+                  {
+                    length: Math.max(Number(selectedRoom.maxGuests) || 1, 1),
+                  },
+                  (_, index) => index + 1
+                ).map((guest) => (
+                  <option key={guest} value={guest}>
+                    {guest} {guest === 1 ? 'tamu' : 'tamu'}
+                  </option>
+                ))}
+              </select>
+
+              <p className="text-muted-foreground mt-2 text-xs">
+                Maksimal {selectedRoom.maxGuests} tamu untuk room ini.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-100 p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Durasi</span>
+
+                <span className="font-semibold text-slate-900">
+                  {nights} malam
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
+        {/* Price Summary */}
         <div className="rounded-2xl border border-pink-100 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-900">Ringkasan harga</h2>
 
           <div className="mt-4 space-y-3">
-            {nightlyPrices.map((night) => (
-              <div
-                key={night.date}
-                className="flex items-center justify-between text-sm"
-              >
-                <span className="text-muted-foreground">
-                  {formatDate(night.date)}
-                </span>
+            {nightlyPrices.map((night) => {
+              const isSpecialPrice =
+                Number(night.price) !== Number(selectedRoom.price);
 
-                <span
-                  className={
-                    Number(night.price) !== Number(selectedRoom.price)
-                      ? 'font-semibold text-rose-600'
-                      : 'font-medium text-slate-900'
-                  }
+              return (
+                <div
+                  key={night.date}
+                  className="flex items-center justify-between gap-4 text-sm"
                 >
-                  Rp {formatPrice(Number(night.price))}
-                </span>
+                  <div>
+                    <p className="text-slate-700">{formatDate(night.date)}</p>
+
+                    {isSpecialPrice && (
+                      <p className="text-xs font-medium text-rose-600">
+                        Harga khusus
+                      </p>
+                    )}
+                  </div>
+
+                  <span
+                    className={
+                      isSpecialPrice
+                        ? 'font-semibold text-rose-600'
+                        : 'font-medium text-slate-900'
+                    }
+                  >
+                    Rp {formatPrice(Number(night.price))}
+                  </span>
+                </div>
+              );
+            })}
+
+            {nightlyPrices.length === 0 && (
+              <div className="rounded-xl bg-rose-50 p-4 text-center">
+                <p className="text-sm text-rose-700">
+                  Harga belum berhasil dimuat.
+                </p>
               </div>
-            ))}
+            )}
 
             <div className="border-t border-slate-100 pt-4">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-900"> Total </span>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Harga dasar / malam
+                </span>
 
-                <span className="text-2xl font-bold text-rose-600">
-                  {' '}
-                  Rp {formatPrice(totalAmount)}
+                <span className="font-medium text-slate-900">
+                  Rp {formatPrice(Number(selectedRoom.price))}
                 </span>
               </div>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Harga kamar / malam</span>
 
-              <span className="font-medium text-slate-900">
-                Rp {formatPrice(Number(selectedRoom.price))}
-              </span>
-            </div>
+              <div className="mt-2 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Durasi</span>
 
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">{nights} malam</span>
-
-              <span className="font-medium text-slate-900">
-                Rp {formatPrice(totalAmount)}
-              </span>
+                <span className="font-medium text-slate-900">
+                  {nights} malam
+                </span>
+              </div>
             </div>
 
             <div className="border-t border-slate-100 pt-4">
@@ -423,7 +526,7 @@ export default function BookingPage() {
         <Button
           className="w-full bg-rose-600 py-6 text-base font-semibold text-white hover:bg-rose-700"
           onClick={handleCreateBooking}
-          disabled={bookingLoading}
+          disabled={bookingLoading || nightlyPrices.length !== nights}
         >
           {bookingLoading ? 'Memproses...' : 'Lanjutkan Pemesanan'}
         </Button>

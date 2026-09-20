@@ -2,13 +2,21 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, MapPin, Home, Users, Search } from 'lucide-react';
+import {
+  ArrowLeft,
+  MapPin,
+  Home,
+  Users,
+  Search,
+  Star,
+} from 'lucide-react';
 
 interface Room {
   id: number;
   name: string;
   description: string | null;
   quantity: number;
+  maxGuests: number;
   price: string | number;
 }
 
@@ -19,6 +27,8 @@ interface Property {
   description: string | null;
   imageUrl: string | null;
   address: string;
+  averageRating?: number;
+  reviewCount?: number;
   rooms: Room[];
 }
 
@@ -33,6 +43,7 @@ export default function ExplorePage() {
   const location = searchParams.get('location') || '';
   const checkIn = searchParams.get('checkIn') || '';
   const checkOut = searchParams.get('checkOut') || '';
+  const guests = searchParams.get('guests') || '2';
 
   useEffect(() => {
     async function fetchProperties() {
@@ -45,6 +56,7 @@ export default function ExplorePage() {
             location: location || undefined,
             checkIn: checkIn || undefined,
             checkOut: checkOut || undefined,
+            guests: guests || undefined,
           },
         });
 
@@ -59,12 +71,14 @@ export default function ExplorePage() {
 
     if (!checkIn || !checkOut) {
       setLoading(false);
-      setError('Silakan pilih tanggal check-in dan check-out terlebih dahulu.');
+      setError(
+        'Silakan pilih tanggal check-in dan check-out terlebih dahulu.'
+      );
       return;
     }
 
     fetchProperties();
-  }, [location, checkIn, checkOut]);
+  }, [location, checkIn, checkOut, guests]);
 
   function formatPrice(price: string | number) {
     return new Intl.NumberFormat('id-ID').format(Number(price));
@@ -97,6 +111,10 @@ export default function ExplorePage() {
       params.set('checkOut', checkOut);
     }
 
+    if (guests) {
+      params.set('guests', guests);
+    }
+
     navigate('/properties/' + propertyId + '?' + params.toString());
   }
 
@@ -124,29 +142,42 @@ export default function ExplorePage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border border-pink-100 bg-white p-4 shadow-sm md:flex-row md:items-center">
-          {location && (
+        <div className="flex flex-col gap-3 rounded-xl border border-pink-100 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center gap-4">
+            {location && (
+              <div className="flex items-center gap-2 text-sm text-slate-700">
+                <MapPin className="h-4 w-4 text-rose-500" />
+
+                <span>
+                  <span className="text-slate-500">Lokasi:</span>{' '}
+                  <span className="font-semibold">{location}</span>
+                </span>
+              </div>
+            )}
+
             <div className="flex items-center gap-2 text-sm text-slate-700">
-              <MapPin className="h-4 w-4 text-rose-500" />
+              <Search className="h-4 w-4 text-rose-500" />
 
               <span>
-                <span className="text-slate-500">Lokasi:</span>{' '}
-                <span className="font-semibold">{location}</span>
+                <span className="text-slate-500">Menginap:</span>{' '}
+                <span className="font-semibold">
+                  {formatDate(checkIn)}
+                  {' – '}
+                  {formatDate(checkOut)}
+                </span>
               </span>
             </div>
-          )}
 
-          <div className="flex items-center gap-2 text-sm text-slate-700">
-            <Search className="h-4 w-4 text-rose-500" />
+            <div className="flex items-center gap-2 text-sm text-slate-700">
+              <Users className="h-4 w-4 text-rose-500" />
 
-            <span>
-              <span className="text-slate-500">Menginap:</span>{' '}
-              <span className="font-semibold">
-                {formatDate(checkIn)}
-                {' – '}
-                {formatDate(checkOut)}
+              <span>
+                <span className="text-slate-500">Tamu:</span>{' '}
+                <span className="font-semibold">
+                  {guests} {Number(guests) === 1 ? 'tamu' : 'tamu'}
+                </span>
               </span>
-            </span>
+            </div>
           </div>
         </div>
 
@@ -182,8 +213,8 @@ export default function ExplorePage() {
             </h2>
 
             <p className="text-muted-foreground mt-1 text-sm">
-              Tidak ada properti yang tersedia untuk lokasi dan tanggal yang
-              kamu pilih.
+              Tidak ada properti yang tersedia untuk lokasi, tanggal, dan
+              jumlah tamu yang kamu pilih.
             </p>
           </div>
         )}
@@ -196,7 +227,8 @@ export default function ExplorePage() {
               </h2>
 
               <p className="text-muted-foreground text-sm">
-                Menampilkan properti yang tersedia untuk periode pilihanmu.
+                Menampilkan properti yang tersedia untuk periode dan jumlah
+                tamu pilihanmu.
               </p>
             </div>
 
@@ -240,6 +272,32 @@ export default function ExplorePage() {
                             {property.address}
                           </span>
                         </div>
+
+                        {/* RATING */}
+                        <div className="mt-2 flex items-center gap-2">
+                          {property.reviewCount &&
+                          property.reviewCount > 0 ? (
+                            <>
+                              <div className="flex items-center gap-1">
+                                <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+
+                                <span className="text-sm font-semibold text-slate-800">
+                                  {Number(
+                                    property.averageRating || 0
+                                  ).toFixed(1)}
+                                </span>
+                              </div>
+
+                              <span className="text-sm text-slate-500">
+                                ({property.reviewCount} ulasan)
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-sm text-slate-400">
+                              Belum ada ulasan
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {firstRoom ? (
@@ -253,7 +311,10 @@ export default function ExplorePage() {
                               <div className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
                                 <Users className="h-3.5 w-3.5" />
 
-                                <span>{firstRoom.quantity} unit</span>
+                                <span>
+                                  {firstRoom.quantity} unit • maksimal{' '}
+                                  {firstRoom.maxGuests} tamu
+                                </span>
                               </div>
                             </div>
 

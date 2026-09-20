@@ -44,6 +44,7 @@ export default function Dashboard() {
 
   const [location, setLocation] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [guestCount, setGuestCount] = useState(2);
   const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
@@ -101,6 +102,8 @@ export default function Dashboard() {
     if (dateRange?.to) {
       params.append('checkOut', formatDateParam(dateRange.to));
     }
+
+    params.append('guests', String(guestCount));
 
     setShowCalendar(false);
 
@@ -258,7 +261,7 @@ export default function Dashboard() {
               className="relative flex flex-col gap-3 rounded-2xl border border-pink-100 bg-white p-4 shadow-md md:flex-row md:items-center"
             >
               {/* LOKASI */}
-              <div className="flex w-full items-center gap-3 border-b border-slate-200 px-3 py-2 md:w-[35%] md:border-r md:border-b-0">
+              <div className="flex w-full items-center gap-3 border-b border-slate-200 px-3 py-2 md:w-[30%] md:border-r md:border-b-0">
                 <MapPin className="h-5 w-5 shrink-0 text-rose-500" />
 
                 <div className="w-full">
@@ -333,6 +336,35 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* JUMLAH TAMU */}
+              <div className="flex w-full items-center gap-3 border-b border-slate-200 px-3 py-2 md:w-[20%] md:border-l md:border-b-0">
+                <Users className="h-5 w-5 shrink-0 text-rose-500" />
+
+                <div className="w-full">
+                  <label
+                    htmlFor="guestCount"
+                    className="block text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+                  >
+                    Jumlah Tamu
+                  </label>
+
+                  <select
+                    id="guestCount"
+                    value={guestCount}
+                    onChange={(e) => setGuestCount(Number(e.target.value))}
+                    className="w-full bg-transparent text-sm text-slate-800 outline-none"
+                  >
+                    {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                      (guest) => (
+                        <option key={guest} value={guest}>
+                          {guest} {guest === 1 ? 'tamu' : 'tamu'}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
               </div>
 
               {/* SEARCH BUTTON */}

@@ -28,7 +28,7 @@ export const sendVerificationEmail = async (email: string, token: string) => {
             html: htmltoSend,
         });
 
-        console.log('Email verifikasi berhasil dikirim ke: ${email}');
+        console.log(`Email verifikasi berhasil dikirim ke: ${email}`);
     } catch (error) {
         console.error('Gagal mengirim email:', error);
         throw new Error('Gagal mengirim email verifikasi');

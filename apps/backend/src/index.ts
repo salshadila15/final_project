@@ -9,6 +9,7 @@ import tenantRoutes from './routes/tenant.routes';
 import propertyRoutes from './routes/property.routes';
 import bookingRoutes from './routes/booking.routes';
 import reviewRoutes from './routes/review.routes';
+import roomRoutes from './routes/room.routes';
 
 console.log('TENANT ROUTES:', tenantRoutes);
 console.log('TENANT ROUTES TYPE:', typeof tenantRoutes);
@@ -34,6 +35,7 @@ app.get('/ping', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/rooms', roomRoutes);
 // user routes
 app.use('/api/users', userRoutes);
 // tenant routes

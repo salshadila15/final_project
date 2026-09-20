@@ -9,7 +9,6 @@ import {
   Building2,
   PlusCircle,
   LogOut,
-  Settings,
   User as UserIcon,
   Home,
   Pencil,
@@ -83,10 +82,10 @@ interface TenantBooking {
   user: BookingUser;
   property: BookingProperty;
   room: BookingRoom;
-  nights: BookingNight[];
+  nights?: BookingNight[];
 }
 
-type ActiveTab = 'overview' | 'profile' | 'settings' | 'report';
+type ActiveTab = 'overview' | 'profile' | 'report';
 
 export default function TenantDashboard() {
   const { user, logout } = useAuth();
@@ -103,6 +102,13 @@ export default function TenantDashboard() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [loadingProperties, setLoadingProperties] = useState(true);
@@ -290,6 +296,69 @@ export default function TenantDashboard() {
     setTimeout(() => {
       setSuccessMessage('');
     }, 3000);
+  };
+
+  // =========================================================
+  // CHANGE PASSWORD
+  // =========================================================
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setPasswordMessage('');
+    setPasswordError('');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Semua field password wajib diisi.');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password baru minimal 6 karakter.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Konfirmasi password tidak sama.');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setPasswordError(
+        'Password baru harus berbeda dari password lama.'
+      );
+      return;
+    }
+
+    try {
+      setIsChangingPassword(true);
+
+      const response = await api.post('/auth/change-password', {
+        currentPassword,
+        newPassword,
+      });
+
+      setPasswordMessage(
+        response.data?.message || 'Password berhasil diubah.'
+      );
+
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+
+      setTimeout(() => {
+        setPasswordMessage('');
+      }, 3000);
+    } catch (error: any) {
+      console.error('Change password error:', error);
+
+      setPasswordError(
+        error.response?.data?.message ||
+          'Gagal mengubah password. Silakan coba lagi.'
+      );
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   // =========================================================
@@ -567,19 +636,6 @@ export default function TenantDashboard() {
             Profil Saya
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('settings')}
-            className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 font-medium transition ${
-              activeTab === 'settings'
-                ? 'bg-rose-50 text-rose-600'
-                : 'text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <Settings className="h-5 w-5" />
-            Settings
-          </button>
-
           <div className="my-4 border-t border-slate-100" />
 
           <button
@@ -596,7 +652,7 @@ export default function TenantDashboard() {
             MAIN CONTENT
         ==================================================== */}
 
-        <main className="min-h-[calc(100vh-73px)] flex-1 bg-slate-50/50 p-6 md:p-8">
+        <main className="min-h-[calc(100vh-73px)] flex-1 bg-slate-50/50 p-6 pb-24 md:p-8 md:pb-8">
           <div className="mx-auto max-w-7xl space-y-8">
             {/* =================================================
                 WELCOME
@@ -1193,114 +1249,197 @@ export default function TenantDashboard() {
             ================================================== */}
 
             {activeTab === 'profile' && (
-              <div className="max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div>
-                    <p className="text-sm font-semibold text-rose-500">
-                      Akun Pengelola
-                    </p>
+              <div className="max-w-2xl space-y-6">
+                {/* PROFILE INFORMATION */}
 
-                    <h2 className="mt-1 text-lg font-semibold text-slate-900">
-                      Profil Tenant
-                    </h2>
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div>
+                      <p className="text-sm font-semibold text-rose-500">
+                        Akun Pengelola
+                      </p>
 
-                    <p className="mt-1 text-sm text-slate-500">
-                      Kelola informasi identitas akun pengelola Anda.
-                    </p>
+                      <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                        Profil Tenant
+                      </h2>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        Kelola informasi identitas akun pengelola Anda.
+                      </p>
+                    </div>
+
+                    {!isEditing && (
+                      <Button
+                        onClick={() => setIsEditing(true)}
+                        variant="outline"
+                        size="sm"
+                        className="border-rose-200 text-rose-600 hover:bg-rose-50"
+                      >
+                        Edit Profil
+                      </Button>
+                    )}
                   </div>
 
-                  {!isEditing && (
-                    <Button
-                      onClick={() => setIsEditing(true)}
-                      variant="outline"
-                      size="sm"
-                      className="border-rose-200 text-rose-600 hover:bg-rose-50"
+                  {!isEditing ? (
+                    <div className="mt-6 space-y-4">
+                      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-slate-500">
+                            Nama Lengkap
+                          </span>
+
+                          <p className="text-sm font-semibold text-slate-900">
+                            {name}
+                          </p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-slate-500">
+                            Email Akun
+                          </span>
+
+                          <p className="text-sm font-semibold text-slate-900">
+                            {email}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <form
+                      onSubmit={handleUpdateProfile}
+                      className="mt-6 space-y-4"
                     >
-                      Edit Profil
-                    </Button>
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Nama Lengkap</Label>
+
+                        <input
+                          id="name"
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
+                          required
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-3 pt-2">
+                        <Button
+                          type="submit"
+                          className="bg-rose-500 text-white hover:bg-rose-600"
+                        >
+                          Simpan Perubahan
+                        </Button>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsEditing(false)}
+                        >
+                          Batal
+                        </Button>
+                      </div>
+                    </form>
                   )}
                 </div>
 
-                {!isEditing ? (
-                  <div className="mt-6 space-y-4">
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                      <div className="space-y-1">
-                        <span className="text-xs font-medium text-slate-500">
-                          Nama Lengkap
-                        </span>
+                {/* CHANGE PASSWORD */}
 
-                        <p className="text-sm font-semibold text-slate-900">
-                          {name}
-                        </p>
-                      </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="border-b border-slate-100 pb-4">
+                    <p className="text-sm font-semibold text-rose-500">
+                      Keamanan Akun
+                    </p>
 
-                      <div className="space-y-1">
-                        <span className="text-xs font-medium text-slate-500">
-                          Email Akun
-                        </span>
+                    <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                      Ubah Password
+                    </h2>
 
-                        <p className="text-sm font-semibold text-slate-900">
-                          {email}
-                        </p>
-                      </div>
-                    </div>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Gunakan password baru yang kuat untuk menjaga keamanan
+                      akun Anda.
+                    </p>
                   </div>
-                ) : (
+
+                  {passwordMessage && (
+                    <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-700">
+                      {passwordMessage}
+                    </div>
+                  )}
+
+                  {passwordError && (
+                    <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+                      {passwordError}
+                    </div>
+                  )}
+
                   <form
-                    onSubmit={handleUpdateProfile}
+                    onSubmit={handleChangePassword}
                     className="mt-6 space-y-4"
                   >
                     <div className="space-y-2">
-                      <Label htmlFor="name">Nama Lengkap</Label>
+                      <Label htmlFor="current-password">
+                        Password Lama
+                      </Label>
 
                       <input
-                        id="name"
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        id="current-password"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        autoComplete="current-password"
                         className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
+                        placeholder="Masukkan password lama"
                         required
                       />
                     </div>
 
-                    <div className="flex items-center gap-3 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">
+                        Password Baru
+                      </Label>
+
+                      <input
+                        id="new-password"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        autoComplete="new-password"
+                        className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
+                        placeholder="Minimal 6 karakter"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">
+                        Konfirmasi Password Baru
+                      </Label>
+
+                      <input
+                        id="confirm-password"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        autoComplete="new-password"
+                        className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
+                        placeholder="Ulangi password baru"
+                        required
+                      />
+                    </div>
+
+                    <div className="pt-2">
                       <Button
                         type="submit"
+                        disabled={isChangingPassword}
                         className="bg-rose-500 text-white hover:bg-rose-600"
                       >
-                        Simpan Perubahan
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setIsEditing(false)}
-                      >
-                        Batal
+                        {isChangingPassword
+                          ? 'Menyimpan...'
+                          : 'Ubah Password'}
                       </Button>
                     </div>
                   </form>
-                )}
-              </div>
-            )}
-
-            {/* =================================================
-                SETTINGS
-            ================================================== */}
-
-            {activeTab === 'settings' && (
-              <div className="max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <p className="text-sm font-semibold text-rose-500">
-                  Pengaturan
-                </p>
-
-                <h2 className="mt-1 text-lg font-semibold text-slate-900">
-                  Akun & Keamanan
-                </h2>
-
-                <p className="mt-2 text-sm text-slate-500">
-                  Ubah kata sandi atau preferensi keamanan akun tenant Anda.
-                </p>
+                </div>
               </div>
             )}
 
@@ -1511,6 +1650,71 @@ export default function TenantDashboard() {
       </div>
 
       {/* =====================================================
+          MOBILE BOTTOM NAVIGATION
+      ====================================================== */}
+
+      <nav className="fixed right-0 bottom-0 left-0 z-40 border-t border-slate-200 bg-white/95 px-2 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-around">
+          <button
+            type="button"
+            onClick={goToOverview}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium transition ${
+              activeTab === 'overview'
+                ? 'bg-rose-50 text-rose-600'
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <LayoutDashboard className="h-5 w-5" />
+            <span>Overview</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={goToProperties}
+            className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium text-slate-500 transition hover:bg-slate-50"
+          >
+            <Building2 className="h-5 w-5" />
+            <span>Properti</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={goToBookings}
+            className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium text-slate-500 transition hover:bg-slate-50"
+          >
+            <CalendarDays className="h-5 w-5" />
+            <span>Booking</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('report')}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium transition ${
+              activeTab === 'report'
+                ? 'bg-rose-50 text-rose-600'
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <BarChart3 className="h-5 w-5" />
+            <span>Laporan</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('profile')}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium transition ${
+              activeTab === 'profile'
+                ? 'bg-rose-50 text-rose-600'
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <UserIcon className="h-5 w-5" />
+            <span>Profil</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* =====================================================
           BOOKING DETAIL MODAL
       ====================================================== */}
 
@@ -1673,8 +1877,8 @@ export default function TenantDashboard() {
                 </h3>
 
                 <div className="divide-y rounded-xl border border-slate-200">
-                  {selectedBooking.nights.length > 0 ? (
-                    selectedBooking.nights.map((night) => (
+                  {(selectedBooking.nights ?? []).length > 0 ? (
+                    (selectedBooking.nights ?? []).map((night) => (
                       <div
                         key={night.id}
                         className="flex items-center justify-between p-3 text-sm"

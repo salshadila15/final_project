@@ -24,9 +24,24 @@ export const createBooking = async (
 
     const { propertyId, roomId, checkIn, checkOut, guests } = req.body;
 
-    if (!propertyId || !roomId || !checkIn || !checkOut || !guests) {
+    if (
+      !propertyId ||
+      !roomId ||
+      !checkIn ||
+      !checkOut ||
+      guests === undefined
+    ) {
       res.status(400).json({
         message: 'Data booking belum lengkap',
+      });
+      return;
+    }
+
+    const guestCount = Number(guests);
+
+    if (!Number.isInteger(guestCount) || guestCount < 1) {
+      res.status(400).json({
+        message: 'Jumlah tamu harus berupa angka minimal 1',
       });
       return;
     }
@@ -62,6 +77,13 @@ export const createBooking = async (
       return;
     }
 
+    if (guestCount > room.maxGuests) {
+      res.status(400).json({
+        message: `Room ini maksimal untuk ${room.maxGuests} tamu`,
+      });
+      return;
+    }
+
     const nights = Math.ceil(
       (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
     );
@@ -89,7 +111,7 @@ export const createBooking = async (
     const nightlyPrices = await getRoomNightlyPrices(
       Number(roomId),
       checkInDate,
-      nights
+      checkOutDate
     );
 
     const totalAmount = nightlyPrices.reduce(
@@ -110,7 +132,7 @@ export const createBooking = async (
         roomId: Number(roomId),
         checkIn: checkInDate,
         checkOut: checkOutDate,
-        guests: Number(guests),
+        guests: guestCount,
         totalAmount,
         paymentDeadline,
       },
@@ -165,6 +187,7 @@ export const getBookingPricePreview = async (
 
     const [checkInYear, checkInMonth, checkInDay] = checkInParts;
     const [checkOutYear, checkOutMonth, checkOutDay] = checkOutParts;
+
     if (
       !checkInYear ||
       !checkInMonth ||
@@ -211,7 +234,7 @@ export const getBookingPricePreview = async (
     const prices = await getRoomNightlyPrices(
       Number(roomId),
       checkInDate,
-      nights
+      checkOutDate
     );
 
     res.status(200).json({

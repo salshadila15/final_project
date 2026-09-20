@@ -51,6 +51,14 @@ export default function PropertyDetail() {
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Date selection
+  const [selectedCheckIn, setSelectedCheckIn] = useState(
+    searchParams.get('checkIn') || ''
+  );
+  const [selectedCheckOut, setSelectedCheckOut] = useState(
+    searchParams.get('checkOut') || ''
+  );
+
   const checkIn = searchParams.get('checkIn') || '';
   const checkOut = searchParams.get('checkOut') || '';
 
@@ -91,7 +99,6 @@ export default function PropertyDetail() {
         setProperty(response.data.data);
       } catch (error) {
         console.error('Get property detail error:', error);
-
         setError('Gagal mengambil detail properti. Silakan coba lagi.');
       } finally {
         setLoading(false);
@@ -152,19 +159,65 @@ export default function PropertyDetail() {
     }).format(new Date(year, month - 1, day));
   }
 
+  function getTomorrowDate() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
   function handleBack() {
     navigate('/user/dashboard');
   }
 
+  // =========================================================
+  // DATE HANDLERS
+  // =========================================================
+
+  function handleCheckInChange(value: string) {
+    setSelectedCheckIn(value);
+
+    // Reset checkout if it becomes invalid
+    if (selectedCheckOut && value >= selectedCheckOut) {
+      setSelectedCheckOut('');
+    }
+  }
+
+  function handleCheckOutChange(value: string) {
+    setSelectedCheckOut(value);
+  }
+
+  function handleCheckAvailability() {
+    const params = new URLSearchParams();
+
+    if (selectedCheckIn) {
+      params.set('checkIn', selectedCheckIn);
+    }
+
+    if (selectedCheckOut) {
+      params.set('checkOut', selectedCheckOut);
+    }
+
+    navigate(`/properties/${id}?${params.toString()}`);
+  }
+
+  // =========================================================
+  // ROOM SELECTION
+  // =========================================================
+
   function handleChooseRoom(roomId: number) {
     const params = new URLSearchParams();
 
-    if (checkIn) {
-      params.set('checkIn', checkIn);
+    if (selectedCheckIn) {
+      params.set('checkIn', selectedCheckIn);
     }
 
-    if (checkOut) {
-      params.set('checkOut', checkOut);
+    if (selectedCheckOut) {
+      params.set('checkOut', selectedCheckOut);
     }
 
     params.set('propertyId', String(id));
@@ -195,6 +248,9 @@ export default function PropertyDetail() {
       ? reviews.reduce((total, review) => total + review.rating, 0) /
         reviews.length
       : 0;
+
+  const canCheckAvailability =
+    Boolean(selectedCheckIn) && Boolean(selectedCheckOut);
 
   // =========================================================
   // LOADING
@@ -311,31 +367,97 @@ export default function PropertyDetail() {
 
         {/* STAY DATES */}
 
-        {(checkIn || checkOut) && (
-          <div className="rounded-2xl border border-pink-100 bg-white p-5 shadow-sm">
-            <div className="flex items-start gap-3">
-              <CalendarDays className="mt-0.5 h-5 w-5 text-rose-500" />
+        <div className="rounded-2xl border border-rose-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
 
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Tanggal menginap
-                </p>
+            <div className="flex-1">
+              <h2 className="text-base font-semibold text-slate-900">
+                Tentukan tanggal menginap
+              </h2>
 
-                <p className="text-muted-foreground mt-1 text-sm">
-                  {formatDate(checkIn)}
-                  {' – '}
-                  {formatDate(checkOut)}
-                </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Pilih tanggal check-in dan check-out sebelum memilih kamar.
+              </p>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {/* CHECK IN */}
+
+                <div>
+                  <label
+                    htmlFor="check-in"
+                    className="mb-2 block text-sm font-medium text-slate-700"
+                  >
+                    Check-in
+                  </label>
+
+                  <input
+                    id="check-in"
+                    type="date"
+                    value={selectedCheckIn}
+                    min={getTomorrowDate()}
+                    onChange={(event) =>
+                      handleCheckInChange(event.target.value)
+                    }
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                  />
+                </div>
+
+                {/* CHECK OUT */}
+
+                <div>
+                  <label
+                    htmlFor="check-out"
+                    className="mb-2 block text-sm font-medium text-slate-700"
+                  >
+                    Check-out
+                  </label>
+
+                  <input
+                    id="check-out"
+                    type="date"
+                    value={selectedCheckOut}
+                    min={selectedCheckIn || getTomorrowDate()}
+                    disabled={!selectedCheckIn}
+                    onChange={(event) =>
+                      handleCheckOutChange(event.target.value)
+                    }
+                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                  />
+                </div>
               </div>
+
+              <Button
+                onClick={handleCheckAvailability}
+                disabled={!canCheckAvailability}
+                className="mt-4 w-full bg-rose-600 text-white hover:bg-rose-700 sm:w-auto"
+              >
+                <CalendarDays className="mr-2 h-4 w-4" />
+                Cek Ketersediaan
+              </Button>
+
+              {checkIn && checkOut && (
+                <div className="mt-4 rounded-lg bg-rose-50 px-4 py-3">
+                  <p className="text-sm font-medium text-rose-800">
+                    Tanggal menginap
+                  </p>
+
+                  <p className="mt-1 text-sm text-rose-700">
+                    {formatDate(checkIn)} – {formatDate(checkOut)}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         {/* ROOMS */}
 
         <div className="space-y-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Pilihan kamar</h2>
+            <h2 className="text-xl font-bold text-slate-900">
+              Pilihan kamar
+            </h2>
 
             <p className="text-muted-foreground mt-1 text-sm">
               Pilih tipe kamar yang sesuai dengan kebutuhanmu.
@@ -372,7 +494,9 @@ export default function PropertyDetail() {
                       <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
                         <Users className="h-4 w-4 text-rose-500" />
 
-                        <span>{room.availableQuantity} kamar tersisa</span>
+                        <span>
+                          {room.availableQuantity} kamar tersedia
+                        </span>
                       </div>
                     </div>
 
@@ -389,12 +513,17 @@ export default function PropertyDetail() {
 
                       <Button
                         onClick={() => handleChooseRoom(room.id)}
-                        disabled={room.availableQuantity <= 0}
+                        disabled={
+                          room.availableQuantity <= 0 ||
+                          !canCheckAvailability
+                        }
                         className="w-full bg-rose-600 text-white hover:bg-rose-700 md:w-auto"
                       >
-                        {room.availableQuantity > 0
-                          ? 'Pilih Kamar'
-                          : 'Kamar Penuh'}
+                        {room.availableQuantity <= 0
+                          ? 'Kamar Penuh'
+                          : !canCheckAvailability
+                            ? 'Pilih Tanggal Dahulu'
+                            : 'Pilih Kamar'}
                       </Button>
                     </div>
                   </div>
@@ -420,7 +549,9 @@ export default function PropertyDetail() {
 
           {reviewsLoading ? (
             <div className="rounded-2xl border border-pink-100 bg-white p-6 text-center shadow-sm">
-              <p className="text-muted-foreground text-sm">Memuat review...</p>
+              <p className="text-muted-foreground text-sm">
+                Memuat review...
+              </p>
             </div>
           ) : reviews.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-pink-200 bg-white p-8 text-center shadow-sm">
@@ -469,7 +600,9 @@ export default function PropertyDetail() {
                           {review.user.name}
                         </p>
 
-                        <div className="mt-1">{renderStars(review.rating)}</div>
+                        <div className="mt-1">
+                          {renderStars(review.rating)}
+                        </div>
                       </div>
 
                       <p className="text-muted-foreground text-xs">

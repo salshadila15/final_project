@@ -1,25 +1,55 @@
 import { Router, Request, Response } from 'express';
+
 import {
-  register,
-  verifyAndSetPassword,
-  login,
-  logout,
-  getProfileController,
-  getMe
+    register,
+    verifyAndSetPassword,
+    login,
+    logout,
+    getProfileController,
+    getMe,
+    changePassword,
 } from '../controllers/auth.controller';
+
 import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-router.get('/test', verifyToken, (req: Request, res: Response) => {
-  res.json({ message: 'Rute auth berhasil diakses!' });
-});
+router.get(
+    '/test',
+    verifyToken,
+    (req: Request, res: Response) => {
+        res.json({
+            message: 'Rute auth berhasil diakses!',
+        });
+    }
+);
 
 router.post('/register', register);
-router.get('/verify-password', verifyAndSetPassword);
-router.post('/verify-password', verifyAndSetPassword);
+
+router.get(
+    '/verify-password',
+    verifyAndSetPassword
+);
+
+router.post(
+    '/verify-password',
+    verifyAndSetPassword
+);
+
 router.post('/login', login);
+
 router.post('/logout', logout);
-router.get('/me', verifyToken, getMe);
+
+router.get(
+    '/me',
+    verifyToken,
+    getMe
+);
+
+router.post(
+    '/change-password',
+    verifyToken,
+    changePassword
+);
 
 export default router;

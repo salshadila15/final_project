@@ -68,7 +68,7 @@ export const getRoomAvailability = async (
 export const getRoomNightlyPrices = async (
   roomId: number,
   checkIn: Date,
-  nights: number
+  checkOut: Date
 ) => {
   const room = await prisma.room.findUnique({
     where: { id: roomId },
@@ -81,42 +81,47 @@ export const getRoomNightlyPrices = async (
     throw new Error('Room tidak ditemukan');
   }
 
-  const endDate = new Date(checkIn);
-  endDate.setUTCDate(endDate.getUTCDate() + nights);
+  const startDate = new Date(checkIn);
+  const endDate = new Date(checkOut);
 
   const specialPrices = await prisma.roomPrice.findMany({
     where: {
       roomId,
       date: {
-        gte: checkIn,
+        gte: startDate,
         lt: endDate,
       },
+    },
+    orderBy: {
+      date: 'asc',
     },
   });
 
   const prices = [];
 
-  for (let i = 0; i < nights; i++) {
-    const date = new Date(checkIn);
-    date.setUTCDate(date.getUTCDate() + i);
+  const currentDate = new Date(startDate);
+
+  while (currentDate < endDate) {
+    const dateKey = currentDate.toISOString().split('T')[0];
 
     const specialPrice = specialPrices.find(
-      (item) =>
-        item.date.toISOString().split('T')[0] ===
-        date.toISOString().split('T')[0]
+      (item) => item.date.toISOString().split('T')[0] === dateKey
     );
 
     prices.push({
-      date,
+      date: new Date(currentDate),
       price: specialPrice?.price ?? room.price,
     });
+
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   }
 
   return prices;
 };
 
 export const getUserBookings = async (userId: number) => {
-  // Batalkan otomatis booking yang belum dibayar dan sudah melewati deadline
+  // Batalkan otomatis booking yang belum dibayar
+  // dan sudah melewati payment deadline.
   await prisma.booking.updateMany({
     where: {
       userId,
