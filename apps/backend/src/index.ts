@@ -20,7 +20,10 @@ const PORT = 8000;
 
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: [
+      'http://localhost:5173', 
+      'https://final-project-frontend-one-livid.vercel.app',
+    ],
     credentials: true,
   })
 );
