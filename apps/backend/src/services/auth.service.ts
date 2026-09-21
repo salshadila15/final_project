@@ -38,7 +38,8 @@ export const registerService = async (
         }
     });
 
-    const verificationLink = `http://localhost:5173/verify-password?token=${verificationToken}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+    const verificationLink = `${frontendUrl}/verify-password?token=${verificationToken}`;
 
     await sendVerificationEmail(email, verificationToken);
 

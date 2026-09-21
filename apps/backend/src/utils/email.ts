@@ -8,7 +8,9 @@ export const sendVerificationEmail = async (email: string, token: string) => {
         const templatePath = path.join(__dirname, '../templates/verification.hbs');
         const source = fs.readFileSync(templatePath, 'utf8');
         const template = Handlebars.compile(source);
-        const verificationUrl = `http://localhost:5173/verify-password?token=${token}`;
+
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const verificationUrl = `${frontendUrl}/verify-password?token=${token}`;
 
         const htmltoSend = template({ verificationUrl });
 
