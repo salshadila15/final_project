@@ -12,6 +12,9 @@ export const sendVerificationEmail = async (email: string, token: string) => {
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const verificationUrl = `${frontendUrl}/verify-password?token=${token}`;
 
+         console.log('FRONTEND_URL', process.env.FRONTEND_URL);
+        console.log('Verification URL:', verificationUrl);
+
         const htmltoSend = template({ verificationUrl });
 
         const transporter = nodemailer.createTransport({
